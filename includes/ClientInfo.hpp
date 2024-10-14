@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ClientInfo.hpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By:  dshatilo < dshatilo@student.hive.fi >     +#+  +:+       +#+        */
+/*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/24 17:38:49 by klukiano          #+#    #+#             */
-/*   Updated: 2024/10/12 00:51:37 by  dshatilo        ###   ########.fr       */
+/*   Updated: 2024/10/14 12:28:24 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,8 +21,7 @@
 class Socket;
 class VirtualHost;
 
-class ClientInfo
-{
+class ClientInfo {
  public:
   ClientInfo(int fd, Socket& sock);
   ClientInfo(const ClientInfo& other)             = delete;

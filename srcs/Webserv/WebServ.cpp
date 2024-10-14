@@ -69,9 +69,10 @@ void WebServ::PollAvailableFDs(void) {
   for (size_t i = 0; i < pollFDs_.size(); i++) {
     int fd = pollFDs_[i].fd;
     short revents = pollFDs_[i].revents;
-
     if (i < sockets_.size()) {
-      CheckForNewConnection(fd, revents, i);
+      /* Don't accept new connections if the num of clients is a certain arbitrary value */
+      if (pollFDs_.size() < 1000 + sockets_.size())
+        CheckForNewConnection(fd, revents, i);
       continue;
     }
     ClientInfo& fd_info = client_info_map_.at(fd);
@@ -79,15 +80,15 @@ void WebServ::PollAvailableFDs(void) {
       logDebug("error or read end has been closed", true);
       CloseConnection(fd, i);
     } else if (revents & POLLHUP) { 
-      logDebug("Hang up: " + std::to_string(fd), true);
-      CloseConnection(fd, i);
+        logDebug("Hang up: " + std::to_string(fd), true);
+        CloseConnection(fd, i);
     } else if (revents & POLLNVAL) {
-      logDebug("Invalid fd: " + std::to_string(fd));
-      CloseConnection(fd, i);
-    } else if (revents & POLLIN) {
-      RecvFromClient(fd_info, i);
-    } else if (revents & POLLOUT)
-      SendToClient(fd_info, pollFDs_[i]);
+        logDebug("Invalid fd: " + std::to_string(fd));
+        CloseConnection(fd, i);
+    } else if (revents & POLLIN)
+        RecvFromClient(fd_info, i);
+      else if (revents & POLLOUT)
+        SendToClient(fd_info, pollFDs_[i]);
   }
 }
 
@@ -104,28 +105,14 @@ void WebServ::CheckForNewConnection(int fd, short revents, int i) {
       client_info_map_.emplace(new_client.fd, ClientInfo(new_client.fd,
                                                          sockets_[i]));
     }
+    else 
+      logError("CheckForNewConnection: accept() failed");
   }
 }
 
-  /* find the host with the parser
-    check if the permissions are good (Location)
-    assign the vhost to the ConnecInfo class
-    set bool to send body if all is good
-    get back and try to read the body
-    read for MAXBYTES and go back and continue next time
-  */
 void WebServ::RecvFromClient(ClientInfo& fd_info, size_t& i) {
   if (fd_info.RecvRequest(pollFDs_[i]))
     CloseConnection(pollFDs_[i].fd, i);
-  // // std::vector<char>   oss;
-  // if (fd_info.getIsParsingBody() == false) {
-  //   if (fd_info.getVhost()->ParseHeader(fd_info, pollFDs_[i]) != 0) {
-  //     CloseConnection(fd_info.getFd(), i);
-  //     perror("recv: ");
-  //   }
-  // } else
-  //     fd_info.getVhost()->WriteBody(fd_info, pollFDs_[i]);
-  /* ASSIGN THIS AFTER BODY WAS READ*/
 }
 
 void WebServ::SendToClient(ClientInfo& fd_info, pollfd& poll) {

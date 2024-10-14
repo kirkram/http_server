@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   HttpResponse.hpp                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: dshatilo <dshatilo@student.hive.fi>        +#+  +:+       +#+        */
+/*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/13 15:51:16 by klukiano          #+#    #+#             */
-/*   Updated: 2024/10/14 10:34:11 by dshatilo         ###   ########.fr       */
+/*   Updated: 2024/10/14 15:02:54 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,17 +35,13 @@ class HttpResponse {
 
  private:
   void  AssignContType(std::string resourcePath);
-  void  OpenFile(std::string& resource_path, std::ifstream& file);
+  void  OpenFile(ClientInfo& fd_info, std::string& resource_path, std::ifstream& file);
   void  ComposeHeader();
-  // std::string     getContType() const;
-  // std::string     getResponseHeader() const;
-  // std::string     getErrorCodeMessage() const;
-  void InitContMap();
-  void LookupStatusMessage();
-  void SendHeader(ClientInfo& fd_info);
-  void SendChunkedBody(ClientInfo& fd_info, pollfd &poll);
-  int  SendOneChunk(int client_socket, std::ifstream &file);
-  int  SendToClient(const int clientSocket, const char *msg, int length);
+  void  LookupStatusMessage();
+  void  SendHeader(ClientInfo& fd_info);
+  void  SendChunkedBody(ClientInfo& fd_info, pollfd &poll);
+  int   SendOneChunk(int client_socket, std::ifstream &file);
+  int   SendToClient(const int clientSocket, const char *msg, int length);
 
   int                                &status_;
   std::map<std::string, std::string> cont_type_map_;
