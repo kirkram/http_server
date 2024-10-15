@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ClientInfo.hpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
+/*   By: dshatilo <dshatilo@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/24 17:38:49 by klukiano          #+#    #+#             */
-/*   Updated: 2024/10/14 12:28:24 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/10/15 11:48:10 by dshatilo         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,7 +21,8 @@
 class Socket;
 class VirtualHost;
 
-class ClientInfo {
+class ClientInfo
+{
  public:
   ClientInfo(int fd, Socket& sock);
   ClientInfo(const ClientInfo& other)             = delete;
@@ -30,7 +31,6 @@ class ClientInfo {
   ClientInfo& operator=(ClientInfo&& other)       = delete;
   ~ClientInfo()                                   = default;
 
-  
   int             RecvRequest(pollfd& poll);
   void            SendResponse(pollfd& poll);
   void            ResetClientInfo();
@@ -42,7 +42,7 @@ class ClientInfo {
   void            setIsSending(bool boolean);
 
 private:
-  int            status_ = 200;
+  std::string    status_ = "200";
   int            fd_;
   Socket&        sock_;
   VirtualHost*   vhost_ = nullptr;

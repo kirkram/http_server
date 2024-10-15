@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 Not Found</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: black;
+        }
+        
+        section {
+            position: relative;
+            width: 100%;
+            height:100vh;
+            overflow: hidden;
+        }
+
+        .background-animation {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* background-image: url("./img/background.jpg"); */
+             background-image: url("/img/background.jpg");
+            background-size: cover;
+            z-index: 0;
+            animation: color-change 2s linear infinite;
+        }
+
+        @keyframes color-change {
+            0%, 100% {
+                filter: hue-rotate(0deg);
+            }
+            50% {
+                filter: hue-rotate(360deg);
+            }
+        }
+
+        .index-wrp {
+            position: relative;
+            z-index: 1;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+
+        .main-card{
+            width: 100%;
+            text-align: center;
+        }
+
+        .main-content{
+            width: 100%;
+            height:100vh;
+        }
+
+
+        .main-content text{
+            font-size: clamp(20px, 18vw, 150px);
+            letter-spacing: 10px;
+            font-weight: 700;
+            fill: none;
+            stroke: #62ffcd;
+            stroke-width: 2px;
+            stroke-linejoin: round;
+        }
+
+        .main-content .msg {
+            font-size: clamp(20px, 18vw, 70px);
+            letter-spacing: 1px;
+            font-weight: 700;
+            fill:none;
+            stroke: #62ffcd;
+            stroke-width: 2px;
+            stroke-linejoin: round;
+        }
+
+
+    </style>
+</head>
+<body>
+    <section>
+        <div class="background-animation"></div>
+        <div class="index-wrp">
+            <div class="main-card">
+                <div class="main-content">
+                    <svg width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+                        <text x="50%" y="45%" text-anchor="middle" dominant-baseline="middle">404</text>
+                        <text x="50%" y="55%" class="msg" text-anchor="middle" dominant-baseline="middle">Not Found</text>
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+</html>

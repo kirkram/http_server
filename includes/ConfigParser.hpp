@@ -6,7 +6,7 @@
 /*   By:  dshatilo < dshatilo@student.hive.fi >     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/19 15:56:49 by klukiano          #+#    #+#             */
-/*   Updated: 2024/10/03 23:35:27 by  dshatilo        ###   ########.fr       */
+/*   Updated: 2024/10/14 21:32:53 by  dshatilo        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,6 +52,7 @@ class ConfigParser
   void ParseRoot(std::string& root, std::stringstream& ss);
   void ParseAutoindex(std::string& autoindex, std::stringstream& ss);
   void ParseIndex(std::string& index, std::stringstream& ss);
+  void ParseUpload(std::string& upload, std::stringstream& ss);
 
   std::ifstream conf_;
 };

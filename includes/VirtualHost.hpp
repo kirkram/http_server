@@ -6,7 +6,7 @@
 /*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/13 17:08:10 by  dshatilo         #+#    #+#             */
-/*   Updated: 2024/10/14 18:51:52 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/10/15 17:02:14 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,13 +40,15 @@ class VirtualHost {
 
   ~VirtualHost() = default;
 
-  std::string ToString() const;
-  size_t      getMaxBodySize() const;
-  std::string getErrorPage(int error) const;
+  std::string     ToString() const;
+  size_t          getMaxBodySize() const;
+  LocationMap&    getLocations();
+
 
  private:
-  StringMap   error_pages_ = {{"404", "/www/404.html"},
-                              {"500", "/www/500.html"}};
+  static const StringMap& getDefaultErrorPages();
+
+  StringMap   error_pages_;
   size_t      client_max_body_size_ = 1048576;
   LocationMap locations_;
 };

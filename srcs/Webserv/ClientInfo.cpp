@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ClientInfo.cpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
+/*   By: dshatilo <dshatilo@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/24 17:39:21 by klukiano          #+#    #+#             */
-/*   Updated: 2024/10/14 13:03:00 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/10/15 13:13:24 by dshatilo         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,7 +42,6 @@ int ClientInfo::RecvRequest(pollfd& poll) {
         || parser_.getMethod() == "HEAD"|| !parser_.IsBodySizeValid(vhost_)) {
       poll.events = POLLOUT;
     }
-    is_parsing_body_ = true;
   } else if (parser_.WriteBody(vhost_, buffer, bytesIn)){
     poll.events = POLLOUT;
   }
@@ -54,7 +53,7 @@ void  ClientInfo::SendResponse(pollfd& poll) {
 }
 
 void  ClientInfo::ResetClientInfo() {
-  status_ = 200;
+  status_ = "200";
   //getfile_.close(); Remove it?
   vhost_ = nullptr;
   parser_.ResetParser();

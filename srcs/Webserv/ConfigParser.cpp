@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ConfigParser.cpp                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
+/*   By:  dshatilo < dshatilo@student.hive.fi >     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/19 15:55:31 by klukiano          #+#    #+#             */
-/*   Updated: 2024/10/04 16:33:57 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/10/14 22:08:00 by  dshatilo        ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,9 +38,15 @@ int ConfigParser::ParseConfig(std::deque<Socket>& sockets) {
     } catch (std::string& error_token) {
       logError("invalid input: \"" + error_token + "\"");
       return 1;
+    } catch (const char* e) {
+      logError(e);
+      return 1;
     }
   }
-  //add protection in case of empty file or empty server
+  if (sockets.empty()) {
+    logError("Missing servers configurations");
+    return 1;
+  }
   return 0;
 }
 
@@ -79,17 +85,17 @@ void ConfigParser::ParseServer(std::stringstream& ss,
     else
       throw token;
   }
+if (listen.empty() || locations.empty()) {
+  throw "Incomplete server configuration";
+}
 auto it = std::find_if(sockets_.begin(), sockets_.end(), [&](Socket& obj) {
       return obj.getSocket() == listen;
   });
   if (it != sockets_.end())
-  {
     it->AddVirtualHost(server_name, max_size, errors, locations);
-    /* Why it doesnt assign a name with the default config? */
-  }
   else
-    sockets_.push_back(
-      Socket(listen, server_name, max_size, errors, locations));
+    sockets_.push_back(Socket(listen, server_name, max_size, errors,
+                              locations));
 }
 
 void ConfigParser::ParseListen(std::string& socket, std::stringstream& ss) {
@@ -159,6 +165,7 @@ void ConfigParser::ParseLocation(LocationMap& locations,
   std::string root;
   std::string autoindex;
   std::string index;
+  std::string upload;
 
   std::string token;
   ss >> token;
@@ -177,6 +184,8 @@ void ConfigParser::ParseLocation(LocationMap& locations,
       ParseAutoindex(autoindex, ss);
     else if (token == "index")
       ParseIndex(index, ss);
+    else if (token == "upload")
+      ParseUpload(upload, ss);
     else if (token == "}")
       break;
     else
@@ -184,7 +193,7 @@ void ConfigParser::ParseLocation(LocationMap& locations,
   }
   if (!locations.contains(location))
     locations.emplace(
-      location, Location(methods, redirection, root, autoindex, index));
+      location, Location(methods, redirection, root, autoindex, index, upload));
 }
 
 void ConfigParser::ParseAllowedMethods(std::string& methods,
@@ -252,4 +261,16 @@ void ConfigParser::ParseIndex(std::string& index, std::stringstream& ss) {
   token.pop_back();
   if (index.empty())
     index = token;
+}
+
+void ConfigParser::ParseUpload(std::string& upload, std::stringstream& ss) {
+  static std::regex format("/[a-zA-Z0-9_-]+;");
+
+  std::string token;
+  ss >> token;
+  if (!std::regex_match(token, format))
+    throw "upload " + token;
+  token.pop_back();
+  if (upload.empty())
+    upload = token;
 }

@@ -6,7 +6,7 @@
 /*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/15 17:35:52 by  dshatilo         #+#    #+#             */
-/*   Updated: 2024/10/14 18:51:11 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/10/15 17:02:05 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,7 +21,8 @@
 VirtualHost::VirtualHost(std::string& max_size,
                          StringMap& errors,
                          LocationMap& locations)
-    : locations_(locations) {
+    : error_pages_(getDefaultErrorPages()),
+      locations_(locations) {
   if (!max_size.empty()) {
     client_max_body_size_ = std::stoi(max_size);
     client_max_body_size_ *= (max_size.back() == 'M' ? 1048576 : 1024);
@@ -32,6 +33,11 @@ VirtualHost::VirtualHost(std::string& max_size,
     error_pages_[key] = value;
   }
 }
+
+std::map<std::string, Location> &VirtualHost::getLocations(){
+  return locations_;
+}
+
 
 std::string VirtualHost::ToString() const {
   std::string out;
@@ -51,18 +57,20 @@ size_t VirtualHost::getMaxBodySize() const {
   return client_max_body_size_;
 }
 
-std::string VirtualHost::getErrorPage(int error) const {
-  std::cout << "here" << std::endl;
-  auto it = error_pages_.find(std::to_string(error));
-  
-  if (it != error_pages_.end())
-    return it->second;
-  else {
-    logError("getErrorPage: can't find the error page, returning 404");
-    it = error_pages_.find("404");
-    if (it != error_pages_.end())
-      return it->second;
-    else
-      return ("/www/404.html");
-  }
+const VirtualHost::StringMap& VirtualHost::getDefaultErrorPages() {
+  static const StringMap error_pages = {{"400", "www/error_pages/400.html"},
+                                        {"403", "www/error_pages/403.html"},
+                                        {"404", "www/error_pages/404.html"},
+                                        {"405", "www/error_pages/405.html"},
+                                        {"411", "www/error_pages/411.html"},
+                                        {"413", "www/error_pages/413.html"},
+                                        {"415", "www/error_pages/415.html"},
+                                        {"431", "www/error_pages/431.html"},
+                                        {"500", "www/error_pages/500.html"},
+                                        {"501", "www/error_pages/501.html"},
+                                        {"502", "www/error_pages/502.html"},
+                                        {"504", "www/error_pages/504.html"},
+                                        {"505", "www/error_pages/505.html"}};
+  logError("HERE");
+  return error_pages;
 }
