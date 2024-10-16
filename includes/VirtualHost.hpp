@@ -6,7 +6,7 @@
 /*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/13 17:08:10 by  dshatilo         #+#    #+#             */
-/*   Updated: 2024/10/15 17:02:14 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/10/16 15:16:15 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,6 +43,7 @@ class VirtualHost {
   std::string     ToString() const;
   size_t          getMaxBodySize() const;
   LocationMap&    getLocations();
+  std::string     getErrorPage(std::string error) const;
 
 
  private:

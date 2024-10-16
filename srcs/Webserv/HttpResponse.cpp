@@ -6,13 +6,15 @@
 /*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/13 15:44:32 by klukiano          #+#    #+#             */
-/*   Updated: 2024/10/15 18:05:20 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/10/16 18:21:21 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "HttpResponse.hpp"
 #include "ClientInfo.hpp"
 #include "Logger.h"
+
+#include <sys/stat.h>
 
 /* How to init the map only once? */
 HttpResponse::HttpResponse(std::string& status)
@@ -68,51 +70,136 @@ void HttpResponse::CreateResponse(ClientInfo& fd_info, pollfd& poll) {
 
 void HttpResponse::SendHeader(ClientInfo& fd_info, pollfd& poll) {
   std::string resource_target = fd_info.getParser().getResourceTarget();
-  logDebug("the resource path is " + resource_target);
-  logDebug("the error code from parser is " + status_);
+        logDebug("the resource path is " + resource_target);
+        logDebug("the error code from parser is " + status_);
 
-  auto it = fd_info.getVhost()->getLocations().find(resource_target);
-  if (it != fd_info.getVhost()->getLocations().end() && \
-      CheckRedirections(fd_info, it->second)) {
+  /* Here I'd need to check if the request is a part of a location , if not, then go level higher  */
+  auto loc_it = fd_info.getVhost()->getLocations().find(resource_target);
+  if (loc_it != fd_info.getVhost()->getLocations().end() && \
+      CheckRedirections(fd_info, loc_it->second)) {
         poll.events = POLLIN;
         return ;
-  }
+      }
   AssignContType(resource_target);
-  std::ifstream& file = fd_info.getGetfile();
-  OpenFile(fd_info, resource_target, file);
+  OpenFile(fd_info, resource_target, loc_it);
   LookupStatusMessage();
   ComposeHeader();
 
-  logDebug("\n------response header------\n" + \
-            header_ + "\n" +\
-            "-----end of response header------\n", true);
+        logDebug("\n------response header------\n" + \
+                  header_ + "\n" +\
+                  "-----end of response header------\n", true);
 
   SendToClient(fd_info.getFd(), header_.c_str(), header_.size());
   fd_info.setIsSending(true);
 }
 
 
+void HttpResponse::OpenFile(ClientInfo& fd_info, std::string& resource_path, LocationMapIt loc_it) {
+  
+  std::ifstream&  file = fd_info.getGetfile();
+  std::string     root_path = "/www";
+  bool            req_is_loc = (loc_it != fd_info.getVhost()->getLocations().end());
+
+  if (resource_path == "/") {
+    resource_path = "index.html";
+    logDebug("returning index page for '/' requeset");
+  }
+  if (req_is_loc)
+    //will be empty automatically if not specified
+    root_path = loc_it->second.root_;
+  logDebug("file " + resource_path + " wasn't opened prior");
+  //If a directory - point to the appointed index
+  std::string full_path ("." + root_path + resource_path);
+  struct stat sb;
+  stat(full_path.c_str(), &sb);
+  //if exists, and a directory, and there is a location like this 
+  if (access(full_path.c_str(), F_OK) == 0 && S_ISDIR(sb.st_mode) && req_is_loc) {
+    //if index is specified for this Location
+    if (!loc_it->second.index_.empty()) {
+      full_path = full_path + loc_it->second.index_;
+      stat(full_path.c_str(), &sb);
+    }
+  }
+  if (!S_ISDIR(sb.st_mode))
+    file.open(full_path, std::ios::binary);
+  if (!file.is_open()) {
+    if (access(full_path.c_str(), F_OK) == 0) {
+       status_ = "500";
+       //open a directory listing here?
+    }
+    else
+      status_ = "404";
+    file.open("./" + fd_info.getVhost()->getErrorPage(status_));
+    if (!file.is_open()) 
+      logError("coulndt open default error page " + fd_info.getVhost()->getErrorPage(status_));
+    return ;
+  }
+}
+
 int HttpResponse::CheckRedirections(ClientInfo& fd_info, Location& loc) {
   if (!loc.redirection_.first.empty()) {
     std::string msg(
-      "HTTP/1.1 " + loc.redirection_.first  + "\r\n" + \
+      "HTTP/1.1 " + loc.redirection_.first +  "\r\n" + \
       "Location: " + loc.redirection_.second + "\r\n" + \
       "Content-Length: 0" + "\r\n" + \
       "\r\n"
     );
-    SendToClient(fd_info.getFd(), msg.c_str(), header_.size());
+    std::cout << "sent " + msg << std::endl;
+    SendToClient(fd_info.getFd(), msg.c_str(), msg.size());
     return 1;
   }
   return 0;
 }
+
+void HttpResponse::AssignContType(std::string resource_path) {
+  try{
+    auto it = cont_type_map_.find(resource_path.substr(resource_path.find_last_of('.')));
+    if (it != cont_type_map_.end())
+      cont_type_ = it->second;
+  }
+  catch (const std::out_of_range &e) {
+    logDebug("AssignContType: no '.' found in the filename");
+  }
+}
+
+void HttpResponse::LookupStatusMessage(void) {
+    std::map<std::string, std::string> status_map = {
+        {"200", "200 OK"},
+        {"400", "400 Bad Request"},
+        {"404", "404 Not Found"},
+        {"405", "405 Method Not Allowed"},
+        {"411", "411 Length Required"},
+        {"500", "500 Internal Server Error"},
+    };
+
+    auto it = status_map.find(status_);
+    if (it != status_map.end()) {
+        status_message_ = it->second;
+    } else {
+
+        logError("LookupStatusMessage: couldn't find the proper status message, assigning 404");
+        logError("status was " + status_);
+        status_message_ = "404 Not Found";
+    }
+}
+
+void HttpResponse::ComposeHeader(void) {
+  std::ostringstream oss;
+	oss << "HTTP/1.1 " << status_message_ << "\r\n";
+	oss << "Content-Type: " << cont_type_ << "\r\n";
+  oss << "Transfer-Encoding: chunked" << "\r\n";
+	oss << "\r\n";
+	this->header_ = oss.str();
+}
+
+
+
 
 
 void HttpResponse::SendChunkedBody(ClientInfo& fd_info, pollfd& poll) {
   
   std::string resource_target = fd_info.getParser().getResourceTarget();
   std::ifstream& file = fd_info.getGetfile();
-  if (!file.is_open())
-    OpenFile(fd_info, resource_target, file);
   int client_socket = fd_info.getFd();
   if (file.is_open()) {
     if (SendOneChunk(client_socket, file) == 0)
@@ -166,72 +253,6 @@ int HttpResponse::SendToClient(const int client_socket, const char* msg, int len
   }
   return bytes_sent;
 }
-
-void HttpResponse::OpenFile(ClientInfo& fd_info, std::string& resource_path, std::ifstream& file) {
-
-  // fd_info.getVhost().
-
-  //with this its just the index.html in the www folder
-  if (resource_path == "/") {
-    resource_path = "index.html";
-    logDebug("returning index page for '/' requeset");
-  }
-
-  //otherwise
-  //try to find the location in the resource path
-  //if it is there - check if there is redirection, if yes - compose header with the Reponse. 302 bydefault bu there are others
-  // 302, 307, 303, 301
-  //if ok then check 
-  (void)fd_info;
-  logDebug("file " + resource_path + " wasnt opened previously");
-  
-  file.open("./www/" + resource_path, std::ios::binary);
-  if (!file.is_open()) {
-    logDebug("couldnt open file " + resource_path + ", opening 404", true);
-    status_ = 404;
-    file.open("." + fd_info.getVhost()->getErrorPage(status_));
-    return ;
-  }
-}
-
-void HttpResponse::AssignContType(std::string resource_path) {
-  try{
-    auto it = cont_type_map_.find(resource_path.substr(resource_path.find_last_of('.')));
-    if (it != cont_type_map_.end())
-      cont_type_ = it->second;
-  }
-  catch (const std::out_of_range &e) {
-    logDebug("AssignContType: no extension found in the filename");
-  }
-}
-
-void HttpResponse::LookupStatusMessage(void) {
-    std::map<std::string, std::string> status_map = {
-        {"200", "200 OK"},
-        {"400", "400 Bad Request"},
-        {"405", "405 Method Not Allowed"},
-        {"411", "411 Length Required"},
-        {"500", "500 Internal Server Error"},
-    };
-
-    auto it = status_map.find(status_);
-    if (it != status_map.end()) {
-        status_message_ = it->second;
-    } else {
-        logError("LookupStatusMessage: couldn't find the proper status message, assigning 404");
-        status_message_ = "404 Not Found";
-    }
-}
-
-void HttpResponse::ComposeHeader(void) {
-  std::ostringstream oss;
-	oss << "HTTP/1.1 " << status_message_ << "\r\n";
-	oss << "Content-Type: " << cont_type_ << "\r\n";
-  oss << "Transfer-Encoding: chunked" << "\r\n";
-	oss << "\r\n";
-	this->header_ = oss.str();
-}
-
 
 void HttpResponse::ResetResponse() {
   cont_type_ = "text/html";

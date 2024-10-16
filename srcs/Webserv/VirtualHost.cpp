@@ -6,7 +6,7 @@
 /*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/15 17:35:52 by  dshatilo         #+#    #+#             */
-/*   Updated: 2024/10/15 17:02:05 by klukiano         ###   ########.fr       */
+/*   Updated: 2024/10/16 15:16:25 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -73,4 +73,19 @@ const VirtualHost::StringMap& VirtualHost::getDefaultErrorPages() {
                                         {"505", "www/error_pages/505.html"}};
   logError("HERE");
   return error_pages;
+}
+
+std::string VirtualHost::getErrorPage(std::string error) const {
+  auto it = error_pages_.find(error);
+  
+  if (it != error_pages_.end())
+    return it->second;
+  else {
+    logError("getErrorPage: can't find the error page, returning 404");
+    it = error_pages_.find("404");
+    if (it != error_pages_.end())
+      return it->second;
+    else
+      return ("www/404.html");
+  }
 }
