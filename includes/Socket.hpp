@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Socket.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: dshatilo <dshatilo@student.hive.fi>        +#+  +:+       +#+        */
+/*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/02 15:28:14 by dshatilo          #+#    #+#             */
-/*   Updated: 2024/10/08 15:53:01 by dshatilo         ###   ########.fr       */
+/*   Updated: 2024/10/14 14:24:19 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,8 +47,6 @@ class Socket {
   std::string   ToString() const;
 
   std::string                         getSocket() const;
-  pollfd                              getListening() const;
-  std::map<std::string, VirtualHost>& getVirtualHosts();
 
  private:
   std::string                         address_ = "127.0.0.0"; //Is it correct?

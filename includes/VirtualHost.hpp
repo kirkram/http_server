@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   VirtualHost.hpp                                    :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: vsavolai <vsavolai@student.hive.fi>        +#+  +:+       +#+        */
+/*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/13 17:08:10 by  dshatilo         #+#    #+#             */
-/*   Updated: 2024/10/16 13:35:40 by vsavolai         ###   ########.fr       */
+/*   Updated: 2024/10/16 15:16:15 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,9 +40,10 @@ class VirtualHost {
 
   ~VirtualHost() = default;
 
-  std::string                     ToString() const;
-  size_t                          getMaxBodySize() const;
-  std::map<std::string, Location> GetLocations() const;
+  std::string     ToString() const;
+  size_t          getMaxBodySize() const;
+  LocationMap&    getLocations();
+  std::string     getErrorPage(std::string error) const;
 
  private:
   static const StringMap& getDefaultErrorPages();

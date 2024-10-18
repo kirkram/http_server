@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Location.hpp                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: dshatilo <dshatilo@student.hive.fi>        +#+  +:+       +#+        */
+/*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/13 17:09:33 by  dshatilo         #+#    #+#             */
-/*   Updated: 2024/10/15 11:45:04 by dshatilo         ###   ########.fr       */
+/*   Updated: 2024/10/16 15:16:07 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 

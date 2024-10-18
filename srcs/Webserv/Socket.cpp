@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Socket.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: vsavolai <vsavolai@student.hive.fi>        +#+  +:+       +#+        */
+/*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/16 12:55:06 by dshatilo          #+#    #+#             */
-/*   Updated: 2024/10/16 11:19:45 by vsavolai         ###   ########.fr       */
+/*   Updated: 2024/10/16 15:22:15 by klukiano         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -101,15 +101,6 @@ std::string Socket::ToString() const {
   return out;
 }
 
-
 std::string Socket::getSocket() const{
   return address_ + ":" + port_;
-}
-
-pollfd Socket::getListening() const{
-  return listening_;
-}
-
-std::map<std::string, VirtualHost>& Socket::getVirtualHosts() {
-    return v_hosts_;
 }

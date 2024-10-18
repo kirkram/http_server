@@ -34,6 +34,11 @@ VirtualHost::VirtualHost(std::string& max_size,
   }
 }
 
+std::map<std::string, Location> &VirtualHost::getLocations(){
+  return locations_;
+}
+
+
 std::string VirtualHost::ToString() const {
   std::string out;
   out += std::string(21, ' ') + "Error Pages:\n";
@@ -72,4 +77,19 @@ const VirtualHost::StringMap& VirtualHost::getDefaultErrorPages() {
                                         {"505", "www/error_pages/505.html"}};
   logError("HERE");
   return error_pages;
+}
+
+std::string VirtualHost::getErrorPage(std::string error) const {
+  auto it = error_pages_.find(error);
+  
+  if (it != error_pages_.end())
+    return it->second;
+  else {
+    logError("getErrorPage: can't find the error page, returning 404");
+    it = error_pages_.find("404");
+    if (it != error_pages_.end())
+      return it->second;
+    else
+      return ("www/404.html");
+  }
 }
