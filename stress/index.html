@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Webserv</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: black;
+            color: #62ffcd;
+        }
+
+        .background-animation {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("img/background.jpg");
+            background-size: cover;
+            z-index: 0;
+            animation: color-change 2s linear infinite;
+        }
+
+        .star {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            animation: animate 8s ease-in-out infinite;
+        }
+
+        .star.star1 { animation-delay: 0s; background: url(img/star1.png); }
+        .star.star2 { animation-delay: -1s; background: url(img/star2.png); }
+        .star.star3 { animation-delay: -2s; background: url(img/star3.png); }
+        .star.star4 { animation-delay: -3s; background: url(img/star4.png); }
+        .star.star5 { animation-delay: -4s; background: url(img/star5.png); }
+        .star.star6 { animation-delay: -5s; background: url(img/star6.png); }
+        .star.star7 { animation-delay: -6s; background: url(img/star7.png); }
+        .star.star8 { animation-delay: -7s; background: url(img/star8.png); }
+
+        @keyframes animate {
+            0%,20%,40%,60%,80%,100% {opacity: 0;}
+
+            10%,30%,50%,70%,90% {opacity: 1;}
+        }
+
+        @keyframes color-change {
+            0%, 100% { filter: hue-rotate(0deg); }
+            0% { filter: hue-rotate(360deg); }
+        }
+
+        .index-wrp {
+            position: relative;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 1;
+        }
+
+        .main-content {
+            max-width: 560px;
+            width: 100%;
+            font-size: clamp(20px, 18vw, 80px);
+            letter-spacing: 10px;
+            font-weight: 700;
+            stroke: #62ffcd;
+            stroke-width: 2px;
+            fill: none;
+            text-align: center;
+        }
+
+        p{
+            position: relative;
+            font-size: clamp(16px, 4vw, 40px);
+            font-weight: 500;
+            margin-top: 0;
+        }
+
+        .form {
+            display: flex;
+            flex-direction: column;
+            width: 300px;
+            margin: 0 auto;
+            margin-bottom: 20px;
+        }
+
+    </style>
+</head>
+<body>   
+        <div class="background-animation"></div>
+        <div class="star star1"></div>
+        <div class="star star2"></div>
+        <div class="star star3"></div>
+        <div class="star star4"></div>
+        <div class="star star5"></div>
+        <div class="star star6"></div>
+        <div class="star star7"></div>
+        <div class="star star8"></div>
+        <div class="index-wrp">
+            <div class="main-content">
+                <svg width="100%" height="100%" viewBox="0 0 450 220" preserveAspectRatio="xMidYMid meet">
+                    <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle">Webserv</text>
+            </div>
+            <p>Welcome to our server</p>
+            <div class="form">
+                <form action="/cgi/print_form.cgi" method="POST" enctype="application/x-www-form-urlencoded">
+                    <input type="text" id="fname" name="fname" placeholder="Enter name"><br>
+                    <input type="submit" value="Upload name" />
+                </form>  
+            </div>
+            <div class="form">
+                <form action="/" method="POST" enctype="multipart/form-data">
+                    <input type="file" id="file" name="file" accept="*/*" onchange="enableSubmitBtn()">
+                    <input type="submit" id="submitBtn" value="Upload file" disabled>
+                </form>  
+            </div>
+            <div class="file-list">
+                <!-- UPLOAD_LIST -->            
+            </div>
+</body>
+</html>
+
+<script>
+    function enableSubmitBtn() {
+        const fileInput = document.getElementById("file");
+        const submitButton = document.getElementById("submitBtn");
+        // Enable the submit button when a file is selected
+        submitButton.disabled = !fileInput.files.length;
+    }
+
+    function deleteFile(filename, element) {
+        fetch(`/${filename}`, {
+            method: 'DELETE',
+        })
+        .then(response => {
+            if (response.ok) {
+                // server sends back new HTML
+                return response.text(); // Get the response body as text
+            } else {
+                console.error("Failed to delete the file on the server");
+                throw new Error('Delete request failed');
+            }
+        })
+        .then(newHtml => {
+            // Replace the old HTML with the new
+            document.open(); // Clear the old HTML
+            document.write(newHtml); // Write the new HTML
+            document.close(); // Close the document stream
+        })
+    }
+</script>
