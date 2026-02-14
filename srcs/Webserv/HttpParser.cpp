@@ -1,23 +1,42 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   HttpParser.cpp                                     :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: dshatilo <dshatilo@student.hive.fi>        +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/09/09 13:13:54 by vsavolai          #+#    #+#             */
-/*   Updated: 2024/11/08 12:43:09 by dshatilo         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include "HttpParser.hpp"
 #include "Logger.hpp"
 #include "ClientConnection.hpp"
 #include "CgiConnection.hpp"
 
-
-
 HttpParser::HttpParser(ClientConnection& client) : client_(client) {}
+
+static int HexToInt(char c) {
+  if (c >= '0' && c <= '9')
+    return c - '0';
+  if (c >= 'a' && c <= 'f')
+    return c - 'a' + 10;
+  if (c >= 'A' && c <= 'F')
+    return c - 'A' + 10;
+  return -1;
+}
+
+static bool DecodeUrlPath(const std::string& encoded, std::string& decoded) {
+  decoded.clear();
+  decoded.reserve(encoded.size());
+  for (size_t i = 0; i < encoded.size(); ++i) {
+    if (encoded[i] == '%') {
+      if (i + 2 >= encoded.size())
+        return false;
+      int hi = HexToInt(encoded[i + 1]);
+      int lo = HexToInt(encoded[i + 2]);
+      if (hi == -1 || lo == -1)
+        return false;
+      char ch = static_cast<char>((hi << 4) | lo);
+      if (ch == '\0' || ch == '\r' || ch == '\n')
+        return false;
+      decoded.push_back(ch);
+      i += 2;
+      continue;
+    }
+    decoded.push_back(encoded[i]);
+  }
+  return true;
+}
 
 bool HttpParser::ParseHeader(const std::string& request) {
   std::istringstream  request_stream(request);
@@ -81,15 +100,32 @@ bool  HttpParser::HandleRequest() {
   else if (method_ == "DELETE" && !HandleDeleteRequest())
     return false;
   else if (method_ == "POST") {
+    static const std::string eoc = "0\r\n\r\n";
     logDebug(request_body_.data());
     if (!IsBodySizeValid())
       return false;
 
-    if (!request_body_.empty() && content_length_ == request_body_.size()) {
-      return HandlePostRequest(request_body_);
-    } else {
-        client_.stage_ = ClientConnection::Stage::kBody;
+    if (is_chunked_) {
+      if (request_body_.size() >= eoc.size()
+          && std::equal(eoc.rbegin(), eoc.rend(), request_body_.rbegin())) {
+        if (!UnChunkBody(request_body_))
+          return false;
+        content_length_ = request_body_.size();
+        return HandlePostRequest(request_body_);
+      }
+      client_.stage_ = ClientConnection::Stage::kBody;
+      return true;
     }
+
+    if (content_length_ == request_body_.size()) {
+      return HandlePostRequest(request_body_);
+    }
+    if (request_body_.size() > content_length_) {
+      logError("Request body exceeds Content-Length");
+      client_.status_ = "400";
+      return false;
+    }
+    client_.stage_ = ClientConnection::Stage::kBody;
   }
   return true;
 }
@@ -112,25 +148,27 @@ const Location* HttpParser::FindLocation(const LocationMap& locations) {
 }
 
 bool HttpParser::WriteBody(std::vector<char>& buffer, int bytesIn) {
-  std::string eoc = "0\r\n\r\n";
+  static const std::string eoc = "0\r\n\r\n";
+  AppendBody(buffer, bytesIn);
+  if (!IsBodySizeValid())
+    return false;
+
   if (is_chunked_) {
-    if (bytesIn > 5 || !std::equal(buffer.begin(), buffer.end(), eoc.begin())) {
-      logDebug("bytesIn == MAXBYTES, more data to receieve");
-      AppendBody(buffer, bytesIn);
-      if (!is_chunked_ &&
-          (request_body_.size() > content_length_)) {
-        logError("Error: Content Too Large");
-        client_.status_ = "413";
-        return false;
-      }
+    if (request_body_.size() < eoc.size()
+        || !std::equal(eoc.rbegin(), eoc.rend(), request_body_.rbegin())) {
       return true;
     }
-    UnChunkBody(request_body_);
+    if (!UnChunkBody(request_body_))
+      return false;
     content_length_ = request_body_.size();
   } else {
-    AppendBody(buffer, bytesIn);
-    if (bytesIn == MAXBYTES)
+    if (request_body_.size() < content_length_)
       return true;
+    if (request_body_.size() > content_length_) {
+      logError("Request body exceeds Content-Length");
+      client_.status_ = "400";
+      return false;
+    }
   }
   if (!HandlePostRequest(request_body_))
     return false;
@@ -140,7 +178,7 @@ bool HttpParser::WriteBody(std::vector<char>& buffer, int bytesIn) {
 
 bool HttpParser::IsBodySizeValid() {
   if (request_body_.size() > client_.vhost_->getMaxBodySize()) {
-    logError("Content body is too large");
+    logError("Content body is too large, max body size is set to ", client_.vhost_->getMaxBodySize() / 1048576 , " mb");
     client_.status_ = "413";
     return false;
   }
@@ -179,9 +217,23 @@ bool HttpParser::ParseStartLine(std::istringstream& request_stream) {
   line_stream >> method_ >> request_target_ >> http_version;
   std::getline(line_stream, line);
 
-  if (method_.empty() || request_target_.empty()
-      || http_version.empty() || line != "\r") {
-    logError("Bad request 400");
+  if (method_.empty()) {
+    logError("Bad request 400, empty method");
+    client_.status_ = "400";
+    return false;
+  }
+  if (request_target_.empty()) {
+    logError("Bad request 400, empty request target");
+    client_.status_ = "400";
+    return false;
+  }
+  if (http_version.empty()) {
+    logError("Bad request 400, empty HTTP version");
+    client_.status_ = "400";
+    return false;
+  }
+  if (line != "\r") {
+    logError("Bad request 400, invalid line ending");
     client_.status_ = "400";
     return false;
   }
@@ -195,7 +247,7 @@ bool HttpParser::ParseStartLine(std::istringstream& request_stream) {
   }
 
   if (request_target_[0] != '/') {
-    logError("Bad request 400");
+    logError("Bad request 400, no /");
     client_.status_ = "400";
     return false;
   }
@@ -211,6 +263,13 @@ bool HttpParser::ParseStartLine(std::istringstream& request_stream) {
     query_string_ = request_target_.substr(query_position + 1);
     request_target_ = request_target_.substr(0, query_position);
   }
+  std::string decoded_target;
+  if (!DecodeUrlPath(request_target_, decoded_target)) {
+    logError("Bad request 400, invalid URL path encoding");
+    client_.status_ = "400";
+    return false;
+  }
+  request_target_ = decoded_target;
   return true;
 }
 
@@ -242,7 +301,7 @@ bool HttpParser::ParseHeaderFields(std::istringstream& request_stream) {
     }
 
   if (!headers_.contains("Host")) {
-    logError("Bad request 400");
+    logError("Bad request 400, no Host");
     client_.status_ = "400";
     return false;
   }
@@ -388,7 +447,7 @@ bool HttpParser::UnChunkBody(std::vector<char>& buf) {
   return true;
 }
 
-void HttpParser::AppendBody(std::vector<char> buffer, int bytesIn) {
+void HttpParser::AppendBody(const std::vector<char>& buffer, int bytesIn) {
   request_body_.insert(request_body_.end(), buffer.begin(),
                        buffer.begin() + bytesIn);
 }
@@ -405,7 +464,8 @@ bool HttpParser::HandlePostRequest(std::vector<char>& request_body) {
       client_.file_.close();
       return false;
     }
-    client_.file_ << request_body.data() << std::flush;
+    client_.file_.write(request_body.data(), request_body.size());
+    client_.file_ << std::flush;
     client_.file_.seekg(0);
     pid_t pid = CgiConnection::CreateCgiConnection(client_);
     if (pid == -1) {
@@ -431,7 +491,7 @@ bool HttpParser::HandlePostRequest(std::vector<char>& request_body) {
       extension = it->second;
     std::ofstream outFile(uploads_ + "upload" + std::to_string(client_.fd_) + extension, std::ios::binary);
     if (outFile.is_open()) {
-      outFile << request_body.data();
+      outFile.write(request_body.data(), request_body.size());
       outFile.close();
       logDebug("File ", filename, " saved successfully");
     } else {
@@ -540,23 +600,6 @@ bool HttpParser::ParseMultiPartData(std::vector<char> &bodyPart) {
     }
   }
   return true;
-}
-
-std::string UrlDecode( std::string& query) {
-  std::string decoded;
-    for (size_t i = 0; i < query.length(); i++) {
-      if (query[i] == '%' && i + 2 < query.length()) {
-        std::string hexValue = query.substr(i + 1, 2);
-        char decodedChar = static_cast<char>(std::stoi(hexValue, nullptr, 16));
-        decoded += decodedChar;
-        i += 2;
-      } else if (query[i] == '+') {
-        decoded += ' ';
-      } else {
-        decoded += query[i];
-      }
-    }
-    return decoded;
 }
 
 bool HttpParser::HandleDeleteRequest() {
@@ -688,6 +731,22 @@ int HttpParser::OpenFile(std::string& filename) {
   return 0;
 }
 
+// int HttpParser::OpenFile(std::string& filename) {
+//   logDebug(filename);
+//   std::fstream& file = client_.file_;
+//   if (method_ == "GET") {
+//     file.open(filename, std::fstream::in | std::ios::binary);
+//   } else {
+//     file.open(filename, std::fstream::in | std::fstream::out| std::fstream::app | std::ios::binary);
+//   }
+//   if (!file.is_open()) {
+//     logInfo("File is not opened ", filename);
+//     client_.status_ = "500";
+//     return 1;
+//   }
+//   return 0;
+// }
+
 static bool existIndex(std::string& target, std::string& index) {
   if (index.size() == 0)
     return false;
@@ -698,11 +757,12 @@ static bool existIndex(std::string& target, std::string& index) {
 }
 
 bool HttpParser::HandleGet(bool autoIndex) {
+  
   if (autoIndex && (!existIndex(request_target_, index_)) && request_target_.back() == '/') {
     if (!CreateDirListing(request_target_))
       return false;
     client_.stage_ = ClientConnection::Stage::kResponse;
-    return true;
+    return true; 
   } else if (!CheckValidPath())
     return false;
   if (request_target_.ends_with(".cgi") ||

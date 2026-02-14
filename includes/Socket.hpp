@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Socket.hpp                                         :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: dshatilo <dshatilo@student.hive.fi>        +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/10/02 15:28:14 by dshatilo          #+#    #+#             */
-/*   Updated: 2024/10/31 14:27:36 by dshatilo         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #ifndef SOCKET_HPP_
 #define SOCKET_HPP_
 
@@ -19,8 +7,6 @@
 #include <unistd.h>
 #include <poll.h>
 #include <vector>
-
-
 
 class Socket {
  private:

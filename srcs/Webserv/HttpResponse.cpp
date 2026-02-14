@@ -1,25 +1,15 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   HttpResponse.cpp                                   :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/09/13 15:44:32 by klukiano          #+#    #+#             */
-/*   Updated: 2024/11/08 12:26:41 by klukiano         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include "HttpResponse.hpp"
 #include "ClientConnection.hpp"
 #include "Logger.hpp"
+#include <algorithm>
+#include <cctype>
 #include <cstring>
 
 HttpResponse::HttpResponse(ClientConnection& client) : client_(client) {}
 
 void HttpResponse::PrepareResponse() {
   std::string& status = client_.status_;
-  if (status.starts_with("4") || status.starts_with("5")) {
+  if (status.compare(0, 1, "4") == 0 || status.compare(0, 1, "5") == 0) {
     client_.additional_headers_.clear();
     client_.additional_headers_["Content-Type:"] = "text/html";
     if (!client_.file_.is_open()) {
@@ -36,22 +26,28 @@ void HttpResponse::PrepareResponse() {
     headers.erase(it);
   } else
     status_message_ = getStatusMap().find(client_.status_)->second;
-  if (status.starts_with("3"))
+  if (status.compare(0, 1, "3") == 0)
     body_sent_ = true;
   client_.additional_headers_["Server:"] = "miniserv-vsdskl";
   ComposeHeader();
+  logDebug("Response prepared: " + status_message_);
+  logDebug("Header prepared: " + header_);
 }
 
 void HttpResponse::AssignContType() {
   std::string request_target = client_.parser_.getRequestTarget();
 
   if (size_t delim = request_target.find_last_of('.'); delim != std::string::npos) {
-    auto it = getContTypeMap().find(request_target.substr(delim));
+    std::string extension = request_target.substr(delim);
+    std::transform(extension.begin(), extension.end(), extension.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    auto it = getContTypeMap().find(extension);
     if (it != getContTypeMap().end()) {
       client_.additional_headers_["Content-Type:"] = it->second;
       return;
     }
-    logDebug("AssignContType: no '.' found in the filename");
+    logDebug("AssignContType: unknown extension: ", extension,
+             " (request target: ", request_target, ")");
   }
   client_.additional_headers_["Content-Type:"] = "text/html";
 }
@@ -193,6 +189,7 @@ const std::map<std::string, std::string>& HttpResponse::getContTypeMap() {
     {".txt", "text/plain"},
 
     {".mp4", "video/mp4"},
+    {".mov", "video/quicktime"},
     {".avi", "video/x-msvideo"},
     {".wmv", "video/x-ms-wmv"},
     {".flv", "video/x-flv"},
