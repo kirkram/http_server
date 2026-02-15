@@ -28,4 +28,4 @@ COPY www ./www
 
 EXPOSE 8080 8081
 
-CMD ["sh", "-c", "sed 's/127\\.0\\.0\\.1:/0.0.0.0:/g' conf/default.conf > /tmp/default.conf && ./webserv /tmp/default.conf"]
+CMD ["sh", "-c", "sed 's/127\\.0\\.0\\.1:/0.0.0.0:/g' conf/default.conf > /tmp/default.conf && exec ./webserv /tmp/default.conf"]
