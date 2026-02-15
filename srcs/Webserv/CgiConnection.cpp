@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   CgiConnection.cpp                                  :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: dshatilo <dshatilo@student.hive.fi>        +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/10/18 14:07:41 by dshatilo          #+#    #+#             */
-/*   Updated: 2024/11/07 15:35:01 by dshatilo         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include <fcntl.h>
 #include <unistd.h>
 #include "CgiConnection.hpp"
@@ -19,6 +7,20 @@
 
 #define READ 0
 #define WRITE 1
+
+static std::string TrimCgiHeaderValue(const std::string& value) {
+  size_t start = 0;
+  while (start < value.size() &&
+         (value[start] == ' ' || value[start] == '\t')) {
+    ++start;
+  }
+
+  size_t end = value.size();
+  while (end > start && (value[end - 1] == ' ' || value[end - 1] == '\t')) {
+    --end;
+  }
+  return value.substr(start, end - start);
+}
 
 CgiConnection::CgiConnection(int read_fd,
                              int write_fd,
@@ -132,7 +134,7 @@ void  CgiConnection::StartCgiProcess(int read_fd,
 
   std::vector<std::string> env_vec = client.PrepareCgiEvniron();
   std::vector<char*>env;
-  env.reserve(env_vec.size() + 1);
+  env.resize(env_vec.size() + 1);
   for (size_t i = 0; i < env_vec.size(); ++i)
     env[i] = env_vec[i].data();
   env[env_vec.size()] = nullptr;
@@ -239,7 +241,7 @@ bool CgiConnection::ParseCgiResponseHeaderFields(char* buffer) {
     }
     line.pop_back();
     std::string header = line.substr(0, delim + 1);
-    std::string header_value = line.substr(delim + 1);
+    std::string header_value = TrimCgiHeaderValue(line.substr(delim + 1));
     additional_headers_[header] = header_value;
   }
 

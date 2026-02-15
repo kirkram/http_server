@@ -1,17 +1,7 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Socket.cpp                                         :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: dshatilo <dshatilo@student.hive.fi>        +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/09/16 12:55:06 by dshatilo          #+#    #+#             */
-/*   Updated: 2024/10/27 14:32:39 by dshatilo         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include "Socket.hpp"
 #include "Logger.hpp"
+#include <cerrno>
+#include <cstring>
 
 Socket::Socket(std::string& listen,
          std::string& name,
@@ -48,7 +38,8 @@ int Socket::InitServer(std::vector<pollfd> &pollFDs) {
 
   if ((listening_.fd = socket(servinfo->ai_family, servinfo->ai_socktype,
       servinfo->ai_protocol)) == -1) {
-    logError("server: socket() error");
+    logError("server: socket() error: errno=", errno, " (",
+             std::strerror(errno), ")");
     return 2;
   }
   /* SO_REUSEADDR for TCP to handle the case when the server shuts down
@@ -57,13 +48,15 @@ int Socket::InitServer(std::vector<pollfd> &pollFDs) {
   int yes = 1;
   if (setsockopt(listening_.fd, SOL_SOCKET, SO_REUSEADDR, &yes,
       sizeof(int)) == -1) {
-    logError("server: setsockopt() error");
+    logError("server: setsockopt() error: errno=", errno, " (",
+             std::strerror(errno), ")");
     return 3;
   }
 
   if (bind(listening_.fd, servinfo->ai_addr, servinfo->ai_addrlen) == -1) {
     close(listening_.fd);
-    logError("server: bind() error");
+    logError("server: bind() error on ", address_, ":", port_, ": errno=",
+             errno, " (", std::strerror(errno), ")");
     return 4;
   }
   freeaddrinfo(servinfo);
@@ -71,7 +64,8 @@ int Socket::InitServer(std::vector<pollfd> &pollFDs) {
   #define BACKLOG 10
   /* TODO: DEFINED IN THE BACKLOG PARAMETER */
   if (listen(listening_.fd, BACKLOG) == -1) {
-    logError("server: listen() error");
+    logError("server: listen() error: errno=", errno, " (",
+             std::strerror(errno), ")");
     return 5;
   }
   listening_.events = POLLIN;

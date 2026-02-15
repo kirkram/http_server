@@ -1,19 +1,24 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   ClientConnection.cpp                                     :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/09/24 17:39:21 by klukiano          #+#    #+#             */
-/*   Updated: 2024/10/19 17:16:35 by klukiano         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
 
 #include "ClientConnection.hpp"
 #include "CgiConnection.hpp"
 #include "Socket.hpp"
 #include "Logger.hpp"
+
+static const size_t kMaxDrainBytes = 1024 * 1024;
+
+static void OpenErrorResponseFile(std::fstream& file,
+                                  VirtualHost* vhost,
+                                  const std::string& status) {
+  if (file.is_open())
+    file.close();
+  file.clear();
+  if (vhost == nullptr)
+    return;
+  std::string path = vhost->getErrorPage(status);
+  if (path.empty())
+    return;
+  file.open(path, std::ios::in | std::ios::binary);
+}
 
 ClientConnection::ClientConnection(int fd, Socket& sock, WebServ& webserv)
     : Connection(fd, 10),
@@ -38,19 +43,36 @@ int ClientConnection::ReceiveData(pollfd& poll) {
     logDebug("Client ", poll.fd, ": EOF received, closing connection.");
     return 2;
   }
-  logDebug("request is:\n", buffer.data());
+  if (stage_ == Stage::kDrain) {
+    drained_bytes_ += static_cast<size_t>(bytesIn);
+    if (drained_bytes_ >= kMaxDrainBytes) {
+      logInfo("Client ", poll.fd, ": drain limit reached, closing connection.");
+      return 1;
+    }
+    return 0;
+  }
   if (stage_ == Stage::kHeader) {
-    bool header_parsed = parser_.ParseHeader(buffer.data());
+    bool header_parsed = parser_.ParseHeader(
+        std::string(buffer.data(), static_cast<size_t>(bytesIn)));
     vhost_ = sock_.FindVhost(parser_.getHost());
     if (!header_parsed || !parser_.HandleRequest()) {
-      file_.open(vhost_->getErrorPage(status_));
+      OpenErrorResponseFile(file_, vhost_, status_);
+      if (!file_.is_open()) {
+        logError("Failed to open error page for status ", status_);
+      }
       stage_ = Stage::kResponse;
     }
   }
   else if (stage_ == Stage::kBody) {
     bool body_read = parser_.WriteBody(buffer, bytesIn);
     if (!body_read) {
-      file_.open(vhost_->getErrorPage(status_));
+      logInfo("Body not read, trying to open error page - ", status_);
+      if (status_ == "413")
+        drain_incoming_ = true;
+      OpenErrorResponseFile(file_, vhost_, status_);
+      if (!file_.is_open()) {
+        logError("Failed to open error page for status ", status_);
+      }
       stage_ = Stage::kResponse;
     }
   }
@@ -72,8 +94,17 @@ int ClientConnection::SendData(pollfd& poll) {
     return 1;
   }
   if (poll.events == POLLIN) {
-    if (status_ != "200")
+    if (status_ != "200") {
+      if (drain_incoming_) {
+        if (shutdown(fd_, SHUT_WR) == -1) {
+          logDebug("Client ", fd_, ": shutdown(SHUT_WR) failed.");
+        }
+        drained_bytes_ = 0;
+        stage_ = Stage::kDrain;
+        return 0;
+      }
       return 1;
+    }
     ResetClientConnection();
   }
   return 0;
@@ -86,6 +117,8 @@ void  ClientConnection::ResetClientConnection() {
   response_.ResetResponse();
   additional_headers_.clear();
   file_.close();
+  drain_incoming_ = false;
+  drained_bytes_ = 0;
   stage_ = Stage::kHeader;
 }
 

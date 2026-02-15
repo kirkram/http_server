@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   ClientConnection.hpp                               :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: dshatilo <dshatilo@student.hive.fi>        +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/09/24 17:38:49 by klukiano          #+#    #+#             */
-/*   Updated: 2024/11/06 11:13:48 by dshatilo         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #ifndef CLIENTCONNECTION_HPP
 #define CLIENTCONNECTION_HPP
 
@@ -17,6 +5,7 @@
 #include "HttpParser.hpp"
 #include "HttpResponse.hpp"
 #include <fstream>
+#include <sys/socket.h>
 
 class Socket;
 class VirtualHost;
@@ -43,7 +32,8 @@ class ClientConnection : public Connection {
                      kBody,
                      kCgi,
                      kResponse,
-                     kSending };
+                     kSending,
+                     kDrain };
 
   Stage         stage_ = Stage::kHeader;
   std::string   status_ = "200";
@@ -53,6 +43,8 @@ class ClientConnection : public Connection {
   HttpParser    parser_;
   HttpResponse  response_;
   std::fstream  file_;
+  bool          drain_incoming_ = false;
+  size_t        drained_bytes_ = 0;
 };
 
 #endif //CLIENTCONNECTION_HPP

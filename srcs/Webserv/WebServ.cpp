@@ -1,27 +1,17 @@
-
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   WebServ.cpp                                        :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: klukiano <klukiano@student.hive.fi>        +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/09/06 15:30:31 by dshatilo          #+#    #+#             */
-/*   Updated: 2024/09/30 17:16:35 by klukiano         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include <string>
 #include <fcntl.h>
 #include "ConfigParser.hpp"
 #include "WebServ.hpp"
 #include "ClientConnection.hpp"
 #include "CgiConnection.hpp"
+#include <errno.h>
 
-bool run = true;
+volatile sig_atomic_t run = true;
 
 static void signalHandler(int signum) {
-  logInfo("Signal ", signum, " received");
+  std::string msg = "\n[SIGNAL] Caught signal: " + std::to_string(signum) + "\n";
+  // write() is async-signal-safe
+  write(STDOUT_FILENO, msg.c_str(), msg.length());
   run = false;
 }
 
@@ -53,15 +43,21 @@ int WebServ::Init() {
 
 void WebServ::Run() {
   signal(SIGINT, signalHandler);
+  signal(SIGTERM, signalHandler);
 
   int socketsReady = 0;
   while (run) {
     socketsReady = poll(pollFDs_.data(), pollFDs_.size(), TIMEOUT);
     if (socketsReady == -1) {
+      if (errno == EINTR) {
+          logInfo("INTERRUPTED. Exiting");
+          continue; 
+       }
       logError("poll() returned -1.");
       break;
-    } else
+    } else {
       PollAvailableFDs();
+    }
   }
   CloseAllConnections();
   logInfo("Shutting down the server");
@@ -168,6 +164,7 @@ void WebServ::CloseConnection(int fd, const int& i) {
 }
 
 void WebServ::CloseAllConnections() {
+  logInfo("Closing all connections...");
   for (size_t i = pollFDs_.size() - 1; i >= sockets_.size(); --i) {
     CloseConnection(pollFDs_[i].fd, static_cast<int>(i));
   }

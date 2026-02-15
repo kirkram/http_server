@@ -1,16 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   HttpParser.hpp                                     :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: vsavolai <vsavolai@student.hive.fi>        +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/09/09 12:16:12 by vsavolai          #+#    #+#             */
-/*   Updated: 2024/11/04 16:09:23 by vsavolai         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-
 #ifndef HTTPPARSER_HPP_
 # define HTTPPARSER_HPP_
 
@@ -63,13 +50,14 @@ class HttpParser {
   std::string                               TrimWhitespace(const std::string& str);
   void                                      HandleCookies();
   bool                                      UnChunkBody(std::vector<char>& buf);
-  void                                      AppendBody(std::vector<char> buffer, int bytesIn);
+  void                                      AppendBody(const std::vector<char>& buffer, int bytesIn);
   bool                                      HandlePostRequest(std::vector<char>& request_body);
   bool                                      HandleMultipartFormData(const std::vector<char> &body,
                                                                   const std::string &contentType);
   bool                                      ParseMultiPartData(std::vector<char> &bodyPart);
   bool                                      HandleDeleteRequest();
   void                                      GenerateFileListHtml();
+  std::string                               GenerateFileListJson();
   bool                                      CheckValidPath();
   bool                                      CreateDirListing(std::string& directory);
   bool                                      HandleGet(bool autoIndex);
