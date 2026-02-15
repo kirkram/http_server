@@ -98,9 +98,13 @@ Configuration files are located in the conf/ directory. You can specify a custom
 
 ## Dev
 
-running with cgi cache bust
+running with index.html cache bust
 ```
-docker build --build-arg CGI_CACHE_BUST=$(date +%s) -t webserv .
+docker build --build-arg WWW_CACHE_BUST=$(date +%s) -t webserv .
+```
+or bust CGI and index.html both
+```
+docker build --build-arg CGI_CACHE_BUST=$(date +%s) --build-arg WWW_CACHE_BUST=$(date +%s) -t webserv .
 ```
 
 stress testing helpers (Go + Node baseline) are available in:

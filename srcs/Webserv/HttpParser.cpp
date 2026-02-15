@@ -643,21 +643,21 @@ bool HttpParser::HandleDeleteRequest() {
 }
 
 void HttpParser::GenerateFileListHtml() {
-  file_list_ = "<ul>";
+  file_list_ = "<div class=\"file-item-list\">";
   try {
     for (const auto &entry : std::filesystem::directory_iterator(uploads_)) {
       std::string filename = entry.path().filename().string();
-      file_list_ += "<li>";
-      file_list_ += "<span><a href=\"/" + uploads_ + filename + "\">/" + uploads_ + filename + "</a></span>";
-      file_list_ += "<button onclick=\"deleteFile('" + filename + "')\">Delete</button>";
-      file_list_ += "</li>";
+      file_list_ += "<div class=\"file-item\">";
+      file_list_ += "<span class=\"file-name\"><a href=\"/" + uploads_ + filename + "\">/" + uploads_ + filename + "</a></span>";
+      file_list_ += "<button class=\"file-action-btn delete-btn\" onclick=\"deleteFile('" + filename + "')\">Delete</button>";
+      file_list_ += "</div>";
     }
   } catch (const std::filesystem::filesystem_error& e) {
-    file_list_ += "<li>Error reading directory: " + std::string(e.what()) + "</li>";
+    file_list_ += "<div class=\"file-item\">Error reading directory: " + std::string(e.what()) + "</div>";
   } catch (const std::exception& e) {
-    file_list_ += "<li>Unexpected error: " + std::string(e.what()) + "</li>";
+    file_list_ += "<div class=\"file-item\">Unexpected error: " + std::string(e.what()) + "</div>";
   }
-  file_list_ += "</ul>";
+  file_list_ += "</div>";
 }
 
 bool HttpParser::CheckValidPath() {

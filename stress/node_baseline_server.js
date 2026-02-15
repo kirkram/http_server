@@ -32,7 +32,7 @@ function safeResolvePath(urlPathname) {
     return null;
   }
   if (decodedPath === "/") {
-    decodedPath = "/index.html";
+    decodedPath = "/indexNode.html";
   }
   const absolutePath = path.resolve(rootDir, "." + decodedPath);
   if (!absolutePath.startsWith(rootDir + path.sep) && absolutePath !== rootDir) {

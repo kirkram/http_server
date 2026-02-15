@@ -91,6 +91,79 @@
             margin-bottom: 20px;
         }
 
+        .file-list {
+            margin-top: 30px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .file-item-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .file-item {
+            background: rgba(98, 255, 205, 0.1);
+            border: 2px solid #62ffcd;
+            border-radius: 8px;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .file-item:hover {
+            background: rgba(98, 255, 205, 0.2);
+            transform: translateX(5px);
+            box-shadow: 0 0 20px rgba(98, 255, 205, 0.3);
+        }
+
+        .file-name {
+            flex: 1;
+            margin-right: 15px;
+        }
+
+        .file-name a {
+            color: #62ffcd;
+            text-decoration: none;
+            font-size: clamp(14px, 3vw, 18px);
+            word-break: break-all;
+            transition: color 0.3s ease;
+        }
+
+        .file-name a:hover {
+            color: #ffffff;
+            text-shadow: 0 0 10px #62ffcd;
+        }
+
+        .file-action-btn {
+            background: transparent;
+            border: 1px solid #62ffcd;
+            color: #62ffcd;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .file-action-btn:hover {
+            background: #62ffcd;
+            color: black;
+        }
+
+        .delete-btn {
+            border-color: #ff6262;
+            color: #ff6262;
+        }
+
+        .delete-btn:hover {
+            background: #ff6262;
+            color: white;
+        }
+
     </style>
 </head>
 <body>   
@@ -135,6 +208,10 @@
         submitButton.disabled = !fileInput.files.length;
     }
 
+    if (window.history.replaceState) {
+        window.history.replaceState(null, null, window.location.href);
+    }
+    
     function deleteFile(filename, element) {
         fetch(`/${filename}`, {
             method: 'DELETE',
