@@ -68,6 +68,29 @@ bool HttpParser::ParseHeader(const std::string& request) {
 }
 
 bool  HttpParser::HandleRequest() {
+  // Handle API endpoints before location processing
+  if (request_target_ == "/api/files" && method_ == "GET") {
+    const LocationMap& locations = client_.vhost_->getLocations();
+    const Location* loc_ptr = FindLocation(locations);
+    if (loc_ptr == nullptr) {
+      logError("Location not found");
+      client_.status_ = "404";
+      return false;
+    }
+    uploads_ = loc_ptr->upload_;
+    
+    std::string filename = "/tmp/webserv/files_" + std::to_string(client_.fd_);
+    if (OpenFile(filename))
+      return false;
+    std::remove(filename.c_str());
+    std::string json = GenerateFileListJson();
+    client_.file_ << json;
+    client_.additional_headers_["Content-Type:"] = "application/json";
+    client_.stage_ = ClientConnection::Stage::kResponse;
+    client_.file_.seekg(0);
+    return true;
+  }
+  
   const LocationMap& locations = client_.vhost_->getLocations();
   const Location* loc_ptr = FindLocation(locations);
 
@@ -501,10 +524,10 @@ bool HttpParser::HandlePostRequest(std::vector<char>& request_body) {
       return false;  
     }
   }
-  std::string htmlStr = InjectFileListIntoHtml(request_target_ + "/" + index_);
-  client_.file_ << htmlStr;
+  client_.status_ = "303";
+  client_.additional_headers_["Location:"] = "/";
+  client_.additional_headers_["Content-Length:"] = "0";
   client_.stage_ = ClientConnection::Stage::kResponse;
-  client_.file_.seekg(0);
   return true;
 }
 
@@ -628,17 +651,10 @@ bool HttpParser::HandleDeleteRequest() {
     client_.status_ = "404";
     return false;
   }
-  std::string clientFd = std::to_string(client_.fd_);
-  std::string filename = "/tmp/webserv/delete_list"  + clientFd;
-  std::fstream& outFile = client_.file_;
-  if (OpenFile(filename))
-    return false;
-  std::remove(filename.c_str());
-  std::string root = request_target_.substr(0, pos);
-  std::string htmlStr = InjectFileListIntoHtml(root + "/" + index_);
-  outFile << htmlStr;
+  client_.status_ = "303";
+  client_.additional_headers_["Location:"] = "/";
+  client_.additional_headers_["Content-Length:"] = "0";
   client_.stage_ = ClientConnection::Stage::kResponse;
-  outFile.seekg(0);
   return true;
 }
 
@@ -658,6 +674,26 @@ void HttpParser::GenerateFileListHtml() {
     file_list_ += "<div class=\"file-item\">Unexpected error: " + std::string(e.what()) + "</div>";
   }
   file_list_ += "</div>";
+}
+
+std::string HttpParser::GenerateFileListJson() {
+  std::string json = "{\"files\":[";
+  try {
+    bool first = true;
+    for (const auto &entry : std::filesystem::directory_iterator(uploads_)) {
+      if (!first) json += ",";
+      first = false;
+      std::string filename = entry.path().filename().string();
+      json += "{\"name\":\"" + filename + "\",";
+      json += "\"path\":\"/" + uploads_ + filename + "\"}";
+    }
+  } catch (const std::filesystem::filesystem_error& e) {
+    return "{\"error\":\"" + std::string(e.what()) + "\"}";
+  } catch (const std::exception& e) {
+    return "{\"error\":\"" + std::string(e.what()) + "\"}";
+  }
+  json += "]}";
+  return json;
 }
 
 bool HttpParser::CheckValidPath() {

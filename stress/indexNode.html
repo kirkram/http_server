@@ -91,6 +91,79 @@
             margin-bottom: 20px;
         }
 
+        .file-list {
+            margin-top: 30px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .file-item-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .file-item {
+            background: rgba(98, 255, 205, 0.1);
+            border: 2px solid #62ffcd;
+            border-radius: 8px;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .file-item:hover {
+            background: rgba(98, 255, 205, 0.2);
+            transform: translateX(5px);
+            box-shadow: 0 0 20px rgba(98, 255, 205, 0.3);
+        }
+
+        .file-name {
+            flex: 1;
+            margin-right: 15px;
+        }
+
+        .file-name a {
+            color: #62ffcd;
+            text-decoration: none;
+            font-size: clamp(14px, 3vw, 18px);
+            word-break: break-all;
+            transition: color 0.3s ease;
+        }
+
+        .file-name a:hover {
+            color: #ffffff;
+            text-shadow: 0 0 10px #62ffcd;
+        }
+
+        .file-action-btn {
+            background: transparent;
+            border: 1px solid #62ffcd;
+            color: #62ffcd;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .file-action-btn:hover {
+            background: #62ffcd;
+            color: black;
+        }
+
+        .delete-btn {
+            border-color: #ff6262;
+            color: #ff6262;
+        }
+
+        .delete-btn:hover {
+            background: #ff6262;
+            color: white;
+        }
+
     </style>
 </head>
 <body>   
@@ -122,37 +195,101 @@
                 </form>  
             </div>
             <div class="file-list">
-                <!-- UPLOAD_LIST -->            
+                <div class="file-item-list" id="fileList">
+                    <!-- Files will be loaded dynamically -->
+                </div>           
             </div>
 </body>
 </html>
 
 <script>
+    function loadFileList() {
+        fetch('/api/files')
+            .then(response => response.json())
+            .then(data => {
+                const fileList = document.getElementById('fileList');
+                fileList.innerHTML = '';
+                
+                if (data.error) {
+                    fileList.innerHTML = `<div class="file-item">Error: ${data.error}</div>`;
+                    return;
+                }
+                
+                if (data.files && data.files.length > 0) {
+                    data.files.forEach(file => {
+                        const fileItem = document.createElement('div');
+                        fileItem.className = 'file-item';
+                        
+                        const fileName = document.createElement('span');
+                        fileName.className = 'file-name';
+                        const link = document.createElement('a');
+                        link.href = file.path;
+                        link.textContent = file.path;
+                        fileName.appendChild(link);
+                        
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.className = 'file-action-btn delete-btn';
+                        deleteBtn.textContent = 'Delete';
+                        deleteBtn.onclick = () => deleteFile(file.name);
+                        
+                        fileItem.appendChild(fileName);
+                        fileItem.appendChild(deleteBtn);
+                        fileList.appendChild(fileItem);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error loading file list:', error);
+            });
+    }
+
     function enableSubmitBtn() {
         const fileInput = document.getElementById("file");
         const submitButton = document.getElementById("submitBtn");
-        // Enable the submit button when a file is selected
         submitButton.disabled = !fileInput.files.length;
     }
 
-    function deleteFile(filename, element) {
+    function deleteFile(filename) {
         fetch(`/${filename}`, {
             method: 'DELETE',
         })
         .then(response => {
             if (response.ok) {
-                // server sends back new HTML
-                return response.text(); // Get the response body as text
+                loadFileList();
             } else {
                 console.error("Failed to delete the file on the server");
-                throw new Error('Delete request failed');
             }
         })
-        .then(newHtml => {
-            // Replace the old HTML with the new
-            document.open(); // Clear the old HTML
-            document.write(newHtml); // Write the new HTML
-            document.close(); // Close the document stream
-        })
+        .catch(error => {
+            console.error("Error deleting file:", error);
+        });
     }
+
+    // Handle form submission
+    document.addEventListener('DOMContentLoaded', function() {
+        loadFileList();
+        
+        const uploadForm = document.querySelector('form[enctype="multipart/form-data"]');
+        if (uploadForm) {
+            uploadForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                
+                fetch('/', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (response.redirected || response.status === 303) {
+                        loadFileList();
+                        this.reset();
+                        document.getElementById('submitBtn').disabled = true;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error uploading file:', error);
+                });
+            });
+        }
+    });
 </script>

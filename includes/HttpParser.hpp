@@ -57,6 +57,7 @@ class HttpParser {
   bool                                      ParseMultiPartData(std::vector<char> &bodyPart);
   bool                                      HandleDeleteRequest();
   void                                      GenerateFileListHtml();
+  std::string                               GenerateFileListJson();
   bool                                      CheckValidPath();
   bool                                      CreateDirListing(std::string& directory);
   bool                                      HandleGet(bool autoIndex);

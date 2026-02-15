@@ -195,41 +195,101 @@
                 </form>  
             </div>
             <div class="file-list">
-                <!-- UPLOAD_LIST -->            
+                <div class="file-item-list" id="fileList">
+                    <!-- Files will be loaded dynamically -->
+                </div>           
             </div>
 </body>
 </html>
 
 <script>
+    function loadFileList() {
+        fetch('/api/files')
+            .then(response => response.json())
+            .then(data => {
+                const fileList = document.getElementById('fileList');
+                fileList.innerHTML = '';
+                
+                if (data.error) {
+                    fileList.innerHTML = `<div class="file-item">Error: ${data.error}</div>`;
+                    return;
+                }
+                
+                if (data.files && data.files.length > 0) {
+                    data.files.forEach(file => {
+                        const fileItem = document.createElement('div');
+                        fileItem.className = 'file-item';
+                        
+                        const fileName = document.createElement('span');
+                        fileName.className = 'file-name';
+                        const link = document.createElement('a');
+                        link.href = file.path;
+                        link.textContent = file.path;
+                        fileName.appendChild(link);
+                        
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.className = 'file-action-btn delete-btn';
+                        deleteBtn.textContent = 'Delete';
+                        deleteBtn.onclick = () => deleteFile(file.name);
+                        
+                        fileItem.appendChild(fileName);
+                        fileItem.appendChild(deleteBtn);
+                        fileList.appendChild(fileItem);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error loading file list:', error);
+            });
+    }
+
     function enableSubmitBtn() {
         const fileInput = document.getElementById("file");
         const submitButton = document.getElementById("submitBtn");
-        // Enable the submit button when a file is selected
         submitButton.disabled = !fileInput.files.length;
     }
 
-    if (window.history.replaceState) {
-        window.history.replaceState(null, null, window.location.href);
-    }
-    
-    function deleteFile(filename, element) {
+    function deleteFile(filename) {
         fetch(`/${filename}`, {
             method: 'DELETE',
         })
         .then(response => {
             if (response.ok) {
-                // server sends back new HTML
-                return response.text(); // Get the response body as text
+                loadFileList();
             } else {
                 console.error("Failed to delete the file on the server");
-                throw new Error('Delete request failed');
             }
         })
-        .then(newHtml => {
-            // Replace the old HTML with the new
-            document.open(); // Clear the old HTML
-            document.write(newHtml); // Write the new HTML
-            document.close(); // Close the document stream
-        })
+        .catch(error => {
+            console.error("Error deleting file:", error);
+        });
     }
+
+    // Handle form submission
+    document.addEventListener('DOMContentLoaded', function() {
+        loadFileList();
+        
+        const uploadForm = document.querySelector('form[enctype="multipart/form-data"]');
+        if (uploadForm) {
+            uploadForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                
+                fetch('/', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (response.redirected || response.status === 303) {
+                        loadFileList();
+                        this.reset();
+                        document.getElementById('submitBtn').disabled = true;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error uploading file:', error);
+                });
+            });
+        }
+    });
 </script>
