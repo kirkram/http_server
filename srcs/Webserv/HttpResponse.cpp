@@ -155,7 +155,7 @@ int HttpResponse::SendToClient(const int client_socket, const char* msg, int len
   int bytes_sent;
   bytes_sent = send(client_socket, msg, length, MSG_NOSIGNAL);
   if (bytes_sent == -1) {
-    logError("send returned -1");
+    logInfo("send returned -1 for client socket: ", std::to_string(client_socket));
     return -1;
   }
   return bytes_sent;

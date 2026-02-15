@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome to Webserv</title>
     <style>
+        /* Prevent FOUC - hide body until CSS loads */
+        html {
+            visibility: hidden;
+            opacity: 0;
+        }
+        
         body {
             font-family: sans-serif;
             background-color: black;
@@ -162,6 +168,12 @@
         .delete-btn:hover {
             background: #ff6262;
             color: white;
+        }
+
+        /* Make page visible after CSS loads */
+        html {
+            visibility: visible;
+            opacity: 1;
         }
 
     </style>
