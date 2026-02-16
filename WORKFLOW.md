@@ -12,57 +12,55 @@ Core runtime flow:
 6. Reset keep-alive connection or close on error/timeout.
 
 ## Mermaid Schema (Overall Flow)
-
 ```mermaid
 flowchart TD
-    A[main.cpp] --> B[Create WebServ]
-    B --> C[Init: parse config + init listening sockets]
-    C --> D{Init OK?}
-    D -- No --> Z1[Exit]
-    D -- Yes --> E[Run poll loop]
+  A[main.cpp] --> B[Create WebServ]
+  B --> C[Init: parse config + init listening sockets]
+  C --> D{Init OK?}
+  D -- Yes --> E[Run poll loop]
 
-    E --> F{poll event type}
-    F -- New client on listen fd --> G[accept + create ClientConnection]
-    G --> E
+  E --> F{poll event type}
+  F -- New client on listen fd --> G[accept + create ClientConnection]
+  G --> E
 
-    F -- Client POLLIN --> H[ClientConnection::ReceiveData]
-    H --> I{State}
-    I -- kHeader --> J[Parse start-line + headers]
-    J --> K[Resolve vhost + location]
-    K --> L{Method}
-    L -- GET --> M[Static file / autoindex / CGI]
-    L -- POST --> N[Read body by Content-Length or chunked end]
-    N --> O[Upload or CGI]
-    L -- DELETE --> P[Delete target + build listing response]
-    M --> Q[kResponse]
-    O --> Q
-    P --> Q
-    J -->|parse/validation error| R[Open error page, set error status]
-    R --> Q
+  F -- Client POLLIN --> H[ClientConnection::ReceiveData]
+  H --> I{State}
+  I -- kHeader --> J[Parse start-line + headers]
+  J --> K[Resolve vhost + location]
+  K --> L{Method}
+  L -- GET --> M[Static file / autoindex / CGI]
+  L -- POST --> N[Read body by Content-Length or chunked end]
+  N --> O[Upload or CGI]
+  L -- DELETE --> P[Delete target + build listing response]
+  M --> Q[kResponse]
+  O --> Q
+  P --> Q
+  J -->|parse/validation error| R[Open error page, set error status]
+  R --> Q
 
-    I -- kBody --> N
-    I -- kDrain --> S[Discard incoming bytes until EOF or drain limit]
-    S --> E
-    I -- kCgi --> E
+  I -- kBody --> N
+  I -- kDrain --> S[Discard bytes]
+  S --> E
+  I -- kCgi --> E
 
-    F -- Client POLLOUT --> T[ClientConnection::SendData]
-    T --> U{State}
-    U -- kResponse --> V[HttpResponse::PrepareResponse]
-    V --> W[kSending]
-    U -- kSending --> X[Send header + chunked body]
-    W --> X
-    X --> Y{Done sending?}
-    Y -- No --> E
-    Y -- Yes + status 200 --> AA[Reset connection to kHeader]
-    AA --> E
-    Y -- Yes + non-200 --> AB{drain_incoming?}
-    AB -- Yes --> AC[Shutdown write side and switch to kDrain]
-    AC --> E
-    AB -- No --> AD[Close connection]
-    AD --> E
+  F -- Client POLLOUT --> T[ClientConnection::SendData]
+  T --> U{State}
+  U -- kResponse --> V[HttpResponse::PrepareResponse]
+  V --> W[kSending]
+  U -- kSending --> X[Send header + chunked body]
+  W --> X
+  X --> Y{Done sending?}
+  Y -- No --> E
+  Y -- Yes + status 200 --> AA[Reset connection to kHeader]
+  AA --> E
+  Y -- Yes + non-200 --> AB{drain_incoming?}
+  AB -- Yes --> AC[Switch to kDrain]
+  AC --> E
+  AB -- No --> AD[Close connection]
+  AD --> E
 
-    F -- POLLERR/HUP/timeout --> AE[Close connection]
-    AE --> E
+  F -- POLLERR/HUP/timeout --> AE[Close connection]
+  AE --> E
 ```
 
 ---
