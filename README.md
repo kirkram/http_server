@@ -109,3 +109,12 @@ docker build --build-arg CGI_CACHE_BUST=$(date +%s) --build-arg WWW_CACHE_BUST=$
 
 stress testing helpers (Go + Node baseline) are available in:
 `stress/README.md`
+
+
+For online GCP Docker
+```
+docker buildx build --platform linux/amd64 -t europe-north1-docker.pkg.dev/nomadic-genre-456612-t9/my-repo/my-app:latest .
+```
+```
+docker push europe-north1-docker.pkg.dev/nomadic-genre-456612-t9/my-repo/my-app:latest 
+```

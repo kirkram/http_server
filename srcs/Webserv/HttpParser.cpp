@@ -324,9 +324,9 @@ bool HttpParser::ParseHeaderFields(std::istringstream& request_stream) {
     }
 
   if (!headers_.contains("Host")) {
-    logError("Bad request 400, no Host");
-    client_.status_ = "400";
-    return false;
+    logInfo("No Host in request");
+    // client_.status_ = "400";
+    // return false;
   }
 
   if (headers_.contains("Cookie")) {
@@ -341,11 +341,13 @@ bool HttpParser::CheckPostHeaders() {
   {
     auto it = headers_.find("Content-Type");
     if (it == headers_.end()) {
-      logError("Content-Type missing for request body");
-      client_.status_ = "400";
-      return false;
+      logInfo("Content-Type missing for request body");
+      // client_.status_ = "400";
+      // return false;
+      content_type_ ="application/octet-stream";
+    } else {
+      content_type_ =it->second;
     }
-    content_type_ =it->second;
   }
   auto it = headers_.find("transfer-encoding");
   is_chunked_ = (it != headers_.end() && it->second == "chunked");
